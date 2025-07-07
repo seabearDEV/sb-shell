@@ -1,4 +1,4 @@
-#!/bin/zsh
+#!/bin/bash
 
 # Description: This script defines a function called 'gc' that performs a Git commit with a spell-checked and corrected commit message.
 # Usage: gc <COMMIT_MESSAGE>
