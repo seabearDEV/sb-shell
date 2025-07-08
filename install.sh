@@ -23,12 +23,17 @@ install_sb_shell() {
   cp ./sb-shell.sh "$INSTALL_DIR"
   cp -r ./scripts* "$INSTALL_DIR"
 
-  # Source the .bashrc file
-  echo "Scripts installed successfully, sourcing the .bashrc file..."
-  source "$HOME/.bashrc"
-
-  echo "Sourcing complete, please be sure to add the following line to your .bashrc or .zshrc file:"
-  echo 'source "$HOME/.sb-shell/sb-shell.sh"'
+  # Installation complete message
+  echo "Scripts installed successfully!"
+  echo ""
+  echo "To complete the installation, add the following line to your shell's configuration file:"
+  echo '  source "$HOME/.sb-shell/sb-shell.sh"'
+  echo ""
+  echo "Common shell configuration files:"
+  echo "  - Bash: ~/.bashrc or ~/.bash_profile"
+  echo "  - Zsh: ~/.zshrc"
+  echo "  - Fish: ~/.config/fish/config.fish (use 'source' command)"
+  echo "  - Other shells: Add to your shell's initialization file"
 }
 
 # Prompt the user for confirmation
