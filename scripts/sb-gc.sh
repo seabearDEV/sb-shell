@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 # Description: This script defines a function called 'gc' that performs a Git commit with a spell-checked and corrected commit message.
 # Usage: gc <COMMIT_MESSAGE>
@@ -6,43 +6,84 @@
 # - COMMIT_MESSAGE: The commit message to be spell-checked and used for the Git commit.
 
 gc() {
-    # Check if aspell is installed
-    if ! command -v aspell &> /dev/null; then
-        echo "Error: 'aspell' is not installed. Please install 'aspell' to use this script."
+    # Check if a commit message was provided
+    if [ $# -eq 0 ] || [ -z "$*" ]; then
+        echo "Error: No commit message provided." >&2
+        echo "Usage: gc <commit message>" >&2
         return 1
     fi
     
-    # Create a temporary file to store the commit message
-    local TEMP_FILE=".check-spelling"
+    # Check if git is installed
+    if ! command -v git >/dev/null 2>&1; then
+        echo "Error: 'git' is not installed. Please install 'git' to use this script." >&2
+        return 1
+    fi
+    
+    # Check if we're in a git repository
+    if ! git rev-parse --git-dir >/dev/null 2>&1; then
+        echo "Error: Not in a git repository." >&2
+        return 1
+    fi
+    
+    # Check if aspell is installed
+    if ! command -v aspell >/dev/null 2>&1; then
+        echo "Error: 'aspell' is not installed. Please install 'aspell' to use this script." >&2
+        return 1
+    fi
+    
+    # Create a secure temporary file
+    TEMP_FILE=$(mktemp "${TMPDIR:-/tmp}/gc-spelling.XXXXXX") || {
+        echo "Error: Failed to create temporary file." >&2
+        return 1
+    }
+    
+    # Ensure temp file is cleaned up on exit
+    trap 'rm -f "$TEMP_FILE"' EXIT INT TERM
 
     # Write the commit message to the temporary file
-    echo "$1" > "$TEMP_FILE"
+    echo "$*" > "$TEMP_FILE"
 
     # Use aspell to check and correct the spelling in the temporary file
     aspell -c "$TEMP_FILE" --dont-backup
 
     # Read the corrected commit message from the temporary file
-    local MESSAGE=$(cat "$TEMP_FILE")
+    MESSAGE=$(cat "$TEMP_FILE")
+    
+    # Check if message is empty after spell check (user might have deleted everything)
+    if [ -z "$MESSAGE" ]; then
+        echo "Error: Commit message is empty after spell check." >&2
+        rm -f "$TEMP_FILE"
+        return 1
+    fi
 
-    # Remove the temporary file
-    rm "$TEMP_FILE"
-
-    # Display the corrected commit message
+    # Display the corrected commit message (with color if terminal supports it)
     echo ""
     echo "Corrected message:"
-    echo "\033[32m$MESSAGE\033[0m"
+    if [ -t 1 ] && [ "${TERM:-dumb}" != "dumb" ]; then
+        printf '\033[32m%s\033[0m\n' "$MESSAGE"
+    else
+        echo "$MESSAGE"
+    fi
     echo ""
 
     # Prompt the user for confirmation to proceed with the commit
-    echo "Do you want to proceed with the commit? (y/n)"
+    printf "Do you want to proceed with the commit? (y/n) "
     read -r RESPONSE
 
     # Check the user's response
-    if [[ "$RESPONSE" == "y" ]]; then
+    if [ "$RESPONSE" = "y" ] || [ "$RESPONSE" = "Y" ]; then
         echo "Committing changes..."
-        git commit -m "$MESSAGE"
-        echo "Commit to local repository complete."
+        if git commit -m "$MESSAGE"; then
+            echo "Commit to local repository complete."
+        else
+            echo "Error: Git commit failed." >&2
+            rm -f "$TEMP_FILE"
+            return 1
+        fi
     else
         echo "Commit has been cancelled."
     fi
+    
+    # Clean up (trap will handle this too, but being explicit)
+    rm -f "$TEMP_FILE"
 }
