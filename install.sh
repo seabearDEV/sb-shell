@@ -8,9 +8,21 @@
 install_sb_shell() {
   local INSTALL_DIR="$HOME/.sb-shell"
 
-  # Check if the directory exists, remove it if it does
+  # Check if the directory exists and warn the user
   if [[ -d "$INSTALL_DIR" ]]; then
-    echo "The directory already exists, deleting it..."
+    echo ""
+    echo "WARNING: The directory '$INSTALL_DIR' already exists!"
+    echo "Continuing will DELETE all existing sb-shell scripts and configurations."
+    echo ""
+    echo "Do you want to continue and replace the existing installation? (y/N)"
+    read replace_response
+    
+    if [[ "$replace_response" != "y" && "$replace_response" != "Y" ]]; then
+      echo "Installation cancelled. Existing installation preserved."
+      return 1
+    fi
+    
+    echo "Removing existing directory..."
     rm -rf "$INSTALL_DIR"
   fi
 
@@ -37,11 +49,11 @@ install_sb_shell() {
 }
 
 # Prompt the user for confirmation
-echo "Install sb-shell scripts to '$HOME/.sb-shell'? (y/n)"
+echo "Install sb-shell scripts to '$HOME/.sb-shell'? (Y/n)"
 read response
 
 # Check the user's response and install if confirmed
-if [[ "$response" == "y" ]]; then
+if [[ "$response" == "y" || "$response" == "Y" || -z "$response" ]]; then
   install_sb_shell
 else
   echo "Installation cancelled."
