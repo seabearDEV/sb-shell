@@ -1,6 +1,53 @@
-# sb-shell Installation
+# sb-shell
 
-This README provides instructions on how to install the ```sb-shell``` scripts using the provided installation script.
+A collection of POSIX-compatible shell scripts and utilities to enhance your command-line experience.
+
+## Available Scripts
+
+### sb-gc - Git Commit with Spell Check
+A convenient Git commit function that includes optional spell-checking for commit messages.
+
+**Usage:** `gc <commit message>`
+
+**Features:**
+- Automatic spell-checking using aspell (if installed)
+- Colored output for better readability
+- Confirmation prompt before committing
+- Comprehensive error handling
+
+**Example:**
+```sh
+gc "Fix typo in documentation"
+```
+
+### sb-mksep - Monitor and Kill System Exhausting Processes
+A process monitoring tool that can automatically kill processes exceeding CPU or memory thresholds.
+
+**Usage:** `sb-mksep [-n PROCESS_NAME] [-c CPU_THRESHOLD] [-m MEMORY_THRESHOLD] [-s SLEEP_TIME] [-t] [-o] [-a]`
+
+**Options:**
+- `-n PROCESS_NAME` - Process name to monitor (default: all processes)
+- `-c CPU_THRESHOLD` - CPU usage percentage threshold
+- `-m MEMORY_THRESHOLD` - Memory usage percentage threshold  
+- `-s SLEEP_TIME` - Sleep time between checks in seconds (default: 30)
+- `-t` - Test mode (shows what would be killed without actually killing)
+- `-o` - Compact mode (only show processes with CPU/Memory >= 1%)
+- `-a` - Aggregate mode (group similar processes together)
+
+**Examples:**
+```sh
+# Monitor Firefox, kill if CPU > 90% or Memory > 85%
+sb-mksep -n firefox -c 90 -m 85
+
+# Test mode: show all processes exceeding 95% CPU
+sb-mksep -c 95 -t
+
+# Monitor Chrome every 10 seconds
+sb-mksep -n "chrome" -s 10
+```
+
+**Aliases:**
+- `mksep` - Alias for `sb-mksep`
 
 ## Prerequisites
 
