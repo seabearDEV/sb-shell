@@ -5,7 +5,7 @@
 # Parameters:
 # - COMMIT_MESSAGE: The commit message to be spell-checked and used for the Git commit.
 
-gc() {
+sb-gc() {
     # Check if a commit message was provided
     if [ $# -eq 0 ] || [ -z "$*" ]; then
         echo "Error: No commit message provided." >&2

@@ -274,8 +274,3 @@ EOF
         sleep "$SLEEP_TIME"
     done
 }
-
-# Create alias for easier access
-alias mksep='sb-mksep'
-
-# Do not auto-execute - only run when explicitly called via mksep or sb-mksep command
