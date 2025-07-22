@@ -5,27 +5,32 @@ A collection of POSIX-compatible shell scripts and utilities to enhance your com
 ## Available Scripts
 
 ### sb-gc - Git Commit with Spell Check
+
 A convenient Git commit function that includes optional spell-checking for commit messages.
 
 **Usage:** `gc <commit message>`
 
 **Features:**
+
 - Automatic spell-checking using aspell (if installed)
 - Colored output for better readability
 - Confirmation prompt before committing
 - Comprehensive error handling
 
 **Example:**
+
 ```sh
 gc "Fix typo in documentation"
 ```
 
 ### sb-mksep - Monitor and Kill System Exhausting Processes
-A process monitoring tool that can automatically kill processes exceeding CPU or memory thresholds. Supports both individual process monitoring and aggregate threshold monitoring for multi-process applications.
 
-**Usage:** `sb-mksep [-n PROCESS_NAME] [-c CPU_THRESHOLD] [-m MEMORY_THRESHOLD] [-s SLEEP_TIME] [-t] [-o] [-a] [-k KILL_COUNT]`
+A process monitoring tool that can automatically kill processes exceeding CPU or memory thresholds. Supports both individual process monitoring and aggregate threshold monitoring for multi-process applications. Features time window tracking to prevent killing processes during brief resource spikes.
+
+**Usage:** `sb-mksep [-n PROCESS_NAME] [-c CPU_THRESHOLD] [-m MEMORY_THRESHOLD] [-s SLEEP_TIME] [-t] [-o] [-a] [-k KILL_COUNT] [-w VIOLATIONS/WINDOW]`
 
 **Options:**
+
 - `-n PROCESS_NAME` - Process name to monitor (default: all processes)
 - `-c CPU_THRESHOLD` - CPU usage percentage threshold
 - `-m MEMORY_THRESHOLD` - Memory usage percentage threshold  
@@ -34,18 +39,28 @@ A process monitoring tool that can automatically kill processes exceeding CPU or
 - `-o` - Compact mode (only show processes with CPU/Memory >= 1%)
 - `-a` - Aggregate mode (apply thresholds to combined usage of matching processes)
 - `-k KILL_COUNT` - Number of processes to kill when aggregate threshold exceeded (requires `-a`)
+- `-w VIOLATIONS/WINDOW` - Time window mode - kill only after X violations within Y checks (e.g., -w 3/5)
 
 **Modes:**
+
 - **Individual mode (default):** Each process is checked separately against thresholds
 - **Aggregate mode (-a):** Combined usage of matching processes is checked against thresholds
+- **Time window mode (-w):** Requires multiple violations before killing (works with both individual and aggregate modes)
 
 **Examples:**
+
 ```sh
 # Individual mode: Kill any Firefox process exceeding 90% CPU or 85% Memory
 sb-mksep -n firefox -c 90 -m 85
 
+# Time window: Kill Firefox only after 3 violations within 5 checks
+sb-mksep -n firefox -c 90 -w 3/5
+
 # Aggregate mode: Kill Chrome processes when their combined CPU exceeds 80%
 sb-mksep -n chrome -a -c 80
+
+# Aggregate with time window: Kill after 2 violations in 4 checks
+sb-mksep -n chrome -a -c 80 -w 2/4
 
 # Kill 2 highest memory processes when total system memory exceeds 90%
 sb-mksep -a -m 90 -k 2
@@ -58,6 +73,7 @@ sb-mksep -n chrome -a -c 70 -s 10
 ```
 
 **Aliases:**
+
 - `mksep` - Alias for `sb-mksep`
 
 ## Prerequisites

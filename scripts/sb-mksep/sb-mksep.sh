@@ -2,7 +2,7 @@
 
 # sb-mksep.sh - Monitor and Kill System Exhausting Processes
 # Description: Monitors processes and kills them when they exceed CPU or memory thresholds
-# Usage: sb-mksep [-n PROCESS_NAME] [-c CPU_THRESHOLD] [-m MEMORY_THRESHOLD] [-s SLEEP_TIME] [-t] [-o] [-a] [-k KILL_COUNT]
+# Usage: sb-mksep [-n PROCESS_NAME] [-c CPU_THRESHOLD] [-m MEMORY_THRESHOLD] [-s SLEEP_TIME] [-t] [-o] [-a] [-k KILL_COUNT] [-w VIOLATIONS/WINDOW]
 # 
 # Parameters:
 #   -n PROCESS_NAME     Process name to monitor (default: monitors all processes)
@@ -13,10 +13,11 @@
 #   -o                  Compact mode - only show processes with CPU >= 1% or Memory >= 1%
 #   -a                  Aggregate mode - apply thresholds to combined usage of processes
 #   -k KILL_COUNT       Number of processes to kill when aggregate threshold exceeded (default: kill until under threshold)
+#   -w VIOLATIONS/WINDOW Time window mode - kill only after X violations within Y checks (e.g., -w 3/5)
 #   -h                  Show help
 
 # Function to monitor and kill system exhausting processes
-sb-mksep() {
+sb_mksep() {
     # Default values
     local PROCESS_NAME=""
     local CPU_THRESHOLD=""
@@ -30,11 +31,14 @@ sb-mksep() {
     local MIN_CPU_DISPLAY=0
     local MIN_MEM_DISPLAY=0
     local KILL_COUNT=""
+    local TIME_WINDOW=""
+    local VIOLATIONS_NEEDED=""
+    local WINDOW_SIZE=""
 
     # Display usage information
     usage() {
         cat << EOF
-Usage: sb-mksep [-n PROCESS_NAME] [-c CPU_THRESHOLD] [-m MEMORY_THRESHOLD] [-s SLEEP_TIME] [-t] [-o] [-a] [-k KILL_COUNT] [-h]
+Usage: sb-mksep [-n PROCESS_NAME] [-c CPU_THRESHOLD] [-m MEMORY_THRESHOLD] [-s SLEEP_TIME] [-t] [-o] [-a] [-k KILL_COUNT] [-w VIOLATIONS/WINDOW] [-h]
 
 Monitor and kill processes that exceed CPU or memory thresholds.
 
@@ -47,6 +51,7 @@ Options:
   -o                  Compact mode - only show processes with CPU >= 1% or Memory >= 1%
   -a                  Aggregate mode - apply thresholds to combined usage of matching processes
   -k KILL_COUNT       Number of processes to kill when aggregate threshold exceeded (default: kill until under threshold)
+  -w VIOLATIONS/WINDOW Time window mode - kill only after X violations within Y checks (e.g., -w 3/5)
   -h                  Show this help message
 
 Modes:
@@ -58,6 +63,7 @@ Examples:
   sb-mksep -n chrome -a -c 80         Aggregate mode: kill Chrome processes when combined CPU>80%
   sb-mksep -a -m 90 -k 2              Kill 2 highest memory processes when total system memory>90%
   sb-mksep -c 95 -t                   Test mode: monitor all processes, show if any exceed 95% CPU
+  sb-mksep -n firefox -c 90 -w 3/5   Kill firefox only after 3 violations within 5 checks
 EOF
     }
 
@@ -71,13 +77,14 @@ EOF
     OPTIND=1
     
     # Parse command line options
-    while getopts ":n:c:m:s:k:toah" opt; do
+    while getopts ":n:c:m:s:k:w:toah" opt; do
         case $opt in
             n) PROCESS_NAME="$OPTARG" ;;
             c) CPU_THRESHOLD="$OPTARG"; MONITOR_CPU=1 ;;
             m) MEMORY_THRESHOLD="$OPTARG"; MONITOR_MEM=1 ;;
             s) SLEEP_TIME="$OPTARG" ;;
             k) KILL_COUNT="$OPTARG" ;;
+            w) TIME_WINDOW="$OPTARG" ;;
             t) TEST_MODE=1 ;;
             o) COMPACT_MODE=1; MIN_CPU_DISPLAY=1; MIN_MEM_DISPLAY=1 ;;
             a) AGGREGATE_MODE=1 ;;
@@ -126,6 +133,28 @@ EOF
         fi
     fi
 
+    # Validate time window if specified
+    if [ -n "$TIME_WINDOW" ]; then
+        # Parse violations/window format (e.g., 3/5)
+        if echo "$TIME_WINDOW" | grep -Eq '^[0-9]+/[0-9]+$'; then
+            VIOLATIONS_NEEDED=$(echo "$TIME_WINDOW" | cut -d'/' -f1)
+            WINDOW_SIZE=$(echo "$TIME_WINDOW" | cut -d'/' -f2)
+            
+            if [ "$VIOLATIONS_NEEDED" -lt 1 ] || [ "$WINDOW_SIZE" -lt 1 ]; then
+                echo "Error: Time window values must be positive numbers" >&2
+                return 1
+            fi
+            
+            if [ "$VIOLATIONS_NEEDED" -gt "$WINDOW_SIZE" ]; then
+                echo "Error: Violations needed cannot exceed window size" >&2
+                return 1
+            fi
+        else
+            echo "Error: Time window must be in format X/Y (e.g., 3/5 for 3 violations in 5 checks)" >&2
+            return 1
+        fi
+    fi
+
     # Check for required commands
     for cmd in ps awk kill bc; do
         if ! command -v "$cmd" >/dev/null 2>&1; then
@@ -169,14 +198,117 @@ EOF
     else
         echo "INDIVIDUAL MODE: Monitoring each process separately"
     fi
+    if [ -n "$TIME_WINDOW" ]; then
+        echo "TIME WINDOW: Kill after $VIOLATIONS_NEEDED violations within $WINDOW_SIZE checks"
+    else
+        echo "TIME WINDOW: Disabled (kill on first violation)"
+    fi
     echo "Press Ctrl+C to stop"
     echo "----------------------------------------"
 
     # Set up signal handling for graceful shutdown
     trap 'echo ""; echo "Monitoring stopped."; return 0' INT TERM
 
+    # Initialize violation tracking
+    # Format: PID:CHECK1,CHECK2,... stored in VIOLATION_HISTORY
+    VIOLATION_HISTORY=""
+    CHECK_COUNT=0
+
+    # Function to add a violation for a process
+    add_violation() {
+        local pid="$1"
+        local new_history=""
+        local found=0
+        
+        # Update existing entry or add new one
+        echo "$VIOLATION_HISTORY" | while IFS=':' read -r vpid vchecks; do
+            if [ -n "$vpid" ]; then
+                if [ "$vpid" = "$pid" ]; then
+                    # Add current check to this PID's history
+                    new_history="${new_history}${pid}:${vchecks},${CHECK_COUNT}
+"
+                    found=1
+                else
+                    new_history="${new_history}${vpid}:${vchecks}
+"
+                fi
+            fi
+        done
+        
+        # If PID not found, add it
+        if [ "$found" -eq 0 ]; then
+            new_history="${new_history}${pid}:${CHECK_COUNT}
+"
+        fi
+        
+        VIOLATION_HISTORY="$new_history"
+    }
+    
+    # Function to count recent violations for a process
+    count_violations() {
+        local pid="$1"
+        local count=0
+        
+        if [ -z "$WINDOW_SIZE" ]; then
+            # No time window - any violation counts
+            echo "$VIOLATION_HISTORY" | grep "^${pid}:" >/dev/null && echo "1" || echo "0"
+            return
+        fi
+        
+        # Count violations within window
+        local min_check=$((CHECK_COUNT - WINDOW_SIZE + 1))
+        [ "$min_check" -lt 1 ] && min_check=1
+        
+        local vchecks=$(echo "$VIOLATION_HISTORY" | grep "^${pid}:" | cut -d':' -f2)
+        if [ -n "$vchecks" ]; then
+            echo "$vchecks" | tr ',' '\n' | while read -r check; do
+                if [ -n "$check" ] && [ "$check" -ge "$min_check" ]; then
+                    count=$((count + 1))
+                fi
+            done | tail -1
+        else
+            echo "0"
+        fi
+    }
+    
+    # Function to clean old violations outside window
+    clean_old_violations() {
+        if [ -z "$WINDOW_SIZE" ]; then
+            return
+        fi
+        
+        local min_check=$((CHECK_COUNT - WINDOW_SIZE + 1))
+        [ "$min_check" -lt 1 ] && min_check=1
+        
+        local new_history=""
+        echo "$VIOLATION_HISTORY" | while IFS=':' read -r vpid vchecks; do
+            if [ -n "$vpid" ]; then
+                local new_checks=""
+                echo "$vchecks" | tr ',' '\n' | while read -r check; do
+                    if [ -n "$check" ] && [ "$check" -ge "$min_check" ]; then
+                        [ -n "$new_checks" ] && new_checks="${new_checks},"
+                        new_checks="${new_checks}${check}"
+                    fi
+                done
+                
+                if [ -n "$new_checks" ]; then
+                    new_history="${new_history}${vpid}:${new_checks}
+"
+                fi
+            fi
+        done
+        
+        VIOLATION_HISTORY="$new_history"
+    }
+
     # Main monitoring loop
     while true; do
+        # Increment check counter
+        CHECK_COUNT=$((CHECK_COUNT + 1))
+        
+        # Clean old violations outside window
+        clean_old_violations
+        
         # Get all process information with CPU and memory usage (single ps call)
         # ps aux format: USER PID %CPU %MEM VSZ RSS TTY STAT START TIME COMMAND
         
@@ -221,53 +353,77 @@ EOF
                         target_name="all processes"
                     fi
                     
+                    # Use "AGGREGATE" as the PID for aggregate violations
+                    add_violation "AGGREGATE"
+                    violation_count=$(count_violations "AGGREGATE")
+                    
                     echo "$(date '+%Y-%m-%d %H:%M:%S') - Aggregate threshold exceeded:"
                     printf "  Target: %s (%d instances) CPU: %s%% Memory: %s%% - %s\n" "$target_name" "$process_count" "$total_cpu" "$total_mem" "$exceeded_reasons"
                     
-                    # Sort processes by the metric that exceeded the threshold (or by highest usage)
-                    if [ "$MONITOR_CPU" -eq 1 ] && echo "$exceeded_reasons" | grep -q "CPU"; then
-                        # Sort by CPU (descending)
-                        SORTED_PROCESSES=$(echo "$ALL_PROCESSES" | awk '{
-                            cmd = ""; for(i=11; i<=NF; i++) cmd = cmd $i " ";
-                            printf "%s %s %.1f %.1f %s\n", $1, $2, $3, $4, cmd
-                        }' | sort -k3 -nr)
-                    else
-                        # Sort by Memory (descending)
-                        SORTED_PROCESSES=$(echo "$ALL_PROCESSES" | awk '{
-                            cmd = ""; for(i=11; i<=NF; i++) cmd = cmd $i " ";
-                            printf "%s %s %.1f %.1f %s\n", $1, $2, $3, $4, cmd
-                        }' | sort -k4 -nr)
-                    fi
-                    
-                    # Determine how many processes to kill
-                    if [ -n "$KILL_COUNT" ]; then
-                        processes_to_kill="$KILL_COUNT"
-                    else
-                        # Kill until under threshold - start with 1 and check if more needed
-                        processes_to_kill=1
-                    fi
-                    
-                    # Kill the specified number of processes
-                    killed_count=0
-                    echo "$SORTED_PROCESSES" | while IFS=' ' read -r user pid cpu mem cmd && [ "$killed_count" -lt "$processes_to_kill" ]; do
-                        # Extract app name for display
-                        if [ -n "$PROCESS_NAME" ]; then
-                            app_name="$PROCESS_NAME"
+                    # Check if we should kill based on time window
+                    should_kill=0
+                    if [ -n "$TIME_WINDOW" ]; then
+                        if [ "$violation_count" -ge "$VIOLATIONS_NEEDED" ]; then
+                            echo "  -> Violation $violation_count of $VIOLATIONS_NEEDED within $WINDOW_SIZE checks"
+                            should_kill=1
                         else
-                            app_name=$(echo "$cmd" | awk -F'/' '{print $NF}' | awk '{print $1}')
+                            echo "  -> Violation $violation_count of $VIOLATIONS_NEEDED within $WINDOW_SIZE checks (not killing yet)"
+                        fi
+                    else
+                        should_kill=1
+                    fi
+                    
+                    if [ "$should_kill" -eq 1 ]; then
+                        # Sort processes by the metric that exceeded the threshold (or by highest usage)
+                        if [ "$MONITOR_CPU" -eq 1 ] && echo "$exceeded_reasons" | grep -q "CPU"; then
+                            # Sort by CPU (descending)
+                            SORTED_PROCESSES=$(echo "$ALL_PROCESSES" | awk '{
+                                cmd = ""; for(i=11; i<=NF; i++) cmd = cmd $i " ";
+                                printf "%s %s %.1f %.1f %s\n", $1, $2, $3, $4, cmd
+                            }' | sort -k3 -nr)
+                        else
+                            # Sort by Memory (descending)
+                            SORTED_PROCESSES=$(echo "$ALL_PROCESSES" | awk '{
+                                cmd = ""; for(i=11; i<=NF; i++) cmd = cmd $i " ";
+                                printf "%s %s %.1f %.1f %s\n", $1, $2, $3, $4, cmd
+                            }' | sort -k4 -nr)
                         fi
                         
-                        if [ "$TEST_MODE" -eq 1 ]; then
-                            printf "    -> Would kill PID %s (%s) CPU: %.1f%% Memory: %.1f%% [TEST MODE]\n" "$pid" "$app_name" "$cpu" "$mem"
+                        # Determine how many processes to kill
+                        if [ -n "$KILL_COUNT" ]; then
+                            processes_to_kill="$KILL_COUNT"
                         else
-                            if kill -TERM "$pid" 2>/dev/null; then
-                                printf "    -> Killed PID %s (%s) CPU: %.1f%% Memory: %.1f%%\n" "$pid" "$app_name" "$cpu" "$mem"
-                            else
-                                printf "    -> Failed to kill PID %s (%s) (may require sudo)\n" "$pid" "$app_name"
-                            fi
+                            # Kill until under threshold - start with 1 and check if more needed
+                            processes_to_kill=1
                         fi
-                        killed_count=$((killed_count + 1))
-                    done
+                        
+                        # Kill the specified number of processes
+                        killed_count=0
+                        echo "$SORTED_PROCESSES" | while IFS=' ' read -r user pid cpu mem cmd && [ "$killed_count" -lt "$processes_to_kill" ]; do
+                            # Extract app name for display
+                            if [ -n "$PROCESS_NAME" ]; then
+                                app_name="$PROCESS_NAME"
+                            else
+                                app_name=$(echo "$cmd" | awk -F'/' '{print $NF}' | awk '{print $1}')
+                            fi
+                            
+                            if [ "$TEST_MODE" -eq 1 ]; then
+                                printf "    -> Would kill PID %s (%s) CPU: %.1f%% Memory: %.1f%% [TEST MODE]\n" "$pid" "$app_name" "$cpu" "$mem"
+                            else
+                                if kill -TERM "$pid" 2>/dev/null; then
+                                    printf "    -> Killed PID %s (%s) CPU: %.1f%% Memory: %.1f%%\n" "$pid" "$app_name" "$cpu" "$mem"
+                                else
+                                    printf "    -> Failed to kill PID %s (%s) (may require sudo)\n" "$pid" "$app_name"
+                                fi
+                            fi
+                            killed_count=$((killed_count + 1))
+                        done
+                        
+                        # Clear aggregate violation history after killing
+                        if [ -n "$TIME_WINDOW" ] && [ "$TEST_MODE" -eq 0 ]; then
+                            VIOLATION_HISTORY=$(echo "$VIOLATION_HISTORY" | grep -v "^AGGREGATE:")
+                        fi
+                    fi
                     echo ""
                 else
                     echo "$(date '+%Y-%m-%d %H:%M:%S') - Aggregate usage within thresholds"
@@ -330,13 +486,40 @@ EOF
                     
                     printf "  Process: %s CPU: %.1f%% Memory: %.1f%%\n" "$app_name" "$cpu" "$mem"
                     
-                    if [ "$TEST_MODE" -eq 1 ]; then
-                        echo "    -> Would kill PID $pid ($reason) [TEST MODE]"
-                    else
-                        if kill -TERM "$pid" 2>/dev/null; then
-                            echo "    -> Killed PID $pid ($reason)"
+                    # Add violation to history
+                    add_violation "$pid"
+                    
+                    # Check if process has enough violations
+                    violation_count=$(count_violations "$pid")
+                    
+                    if [ -n "$TIME_WINDOW" ]; then
+                        # Time window mode - check if enough violations
+                        if [ "$violation_count" -ge "$VIOLATIONS_NEEDED" ]; then
+                            echo "    -> Violation $violation_count of $VIOLATIONS_NEEDED within $WINDOW_SIZE checks"
+                            if [ "$TEST_MODE" -eq 1 ]; then
+                                echo "    -> Would kill PID $pid ($reason) [TEST MODE]"
+                            else
+                                if kill -TERM "$pid" 2>/dev/null; then
+                                    echo "    -> Killed PID $pid ($reason)"
+                                    # Remove from violation history after killing
+                                    VIOLATION_HISTORY=$(echo "$VIOLATION_HISTORY" | grep -v "^${pid}:")
+                                else
+                                    echo "    -> Failed to kill PID $pid (may require sudo)"
+                                fi
+                            fi
                         else
-                            echo "    -> Failed to kill PID $pid (may require sudo)"
+                            echo "    -> Violation $violation_count of $VIOLATIONS_NEEDED within $WINDOW_SIZE checks (not killing yet)"
+                        fi
+                    else
+                        # No time window - kill immediately
+                        if [ "$TEST_MODE" -eq 1 ]; then
+                            echo "    -> Would kill PID $pid ($reason) [TEST MODE]"
+                        else
+                            if kill -TERM "$pid" 2>/dev/null; then
+                                echo "    -> Killed PID $pid ($reason)"
+                            else
+                                echo "    -> Failed to kill PID $pid (may require sudo)"
+                            fi
                         fi
                     fi
                 done
@@ -396,3 +579,6 @@ EOF
         sleep "$SLEEP_TIME"
     done
 }
+
+# Call the function with all arguments
+sb_mksep "$@"
