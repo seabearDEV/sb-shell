@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 # Description: This script installs sb-shell scripts to the user's home directory.
 # Usage: Run the script and follow the prompts to install sb-shell scripts.
@@ -6,10 +6,10 @@
 
 # Function to install sb-shell scripts
 install_sb_shell() {
-  local INSTALL_DIR="$HOME/.sb-shell"
+  INSTALL_DIR="$HOME/.sb-shell"
 
   # Check if the directory exists and warn the user
-  if [[ -d "$INSTALL_DIR" ]]; then
+  if [ -d "$INSTALL_DIR" ]; then
     echo ""
     echo "WARNING: The directory '$INSTALL_DIR' already exists!"
     echo "Continuing will DELETE all existing sb-shell scripts and configurations."
@@ -17,7 +17,7 @@ install_sb_shell() {
     echo "Do you want to continue and replace the existing installation? (y/N)"
     read replace_response
     
-    if [[ "$replace_response" != "y" && "$replace_response" != "Y" ]]; then
+    if [ "$replace_response" != "y" ] && [ "$replace_response" != "Y" ]; then
       echo "Installation cancelled. Existing installation preserved."
       return 1
     fi
@@ -53,7 +53,7 @@ echo "Install sb-shell scripts to '$HOME/.sb-shell'? (Y/n)"
 read response
 
 # Check the user's response and install if confirmed
-if [[ "$response" == "y" || "$response" == "Y" || -z "$response" ]]; then
+if [ "$response" = "y" ] || [ "$response" = "Y" ] || [ -z "$response" ]; then
   install_sb_shell
 else
   echo "Installation cancelled."

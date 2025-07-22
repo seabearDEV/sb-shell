@@ -19,21 +19,21 @@
 # Function to monitor and kill system exhausting processes
 sb_mksep() {
     # Default values
-    local PROCESS_NAME=""
-    local CPU_THRESHOLD=""
-    local MEMORY_THRESHOLD=""
-    local SLEEP_TIME=30
-    local TEST_MODE=0
-    local MONITOR_CPU=0
-    local MONITOR_MEM=0
-    local COMPACT_MODE=0
-    local AGGREGATE_MODE=0
-    local MIN_CPU_DISPLAY=0
-    local MIN_MEM_DISPLAY=0
-    local KILL_COUNT=""
-    local TIME_WINDOW=""
-    local VIOLATIONS_NEEDED=""
-    local WINDOW_SIZE=""
+    PROCESS_NAME=""
+    CPU_THRESHOLD=""
+    MEMORY_THRESHOLD=""
+    SLEEP_TIME=30
+    TEST_MODE=0
+    MONITOR_CPU=0
+    MONITOR_MEM=0
+    COMPACT_MODE=0
+    AGGREGATE_MODE=0
+    MIN_CPU_DISPLAY=0
+    MIN_MEM_DISPLAY=0
+    KILL_COUNT=""
+    TIME_WINDOW=""
+    VIOLATIONS_NEEDED=""
+    WINDOW_SIZE=""
 
     # Display usage information
     usage() {
@@ -216,9 +216,9 @@ EOF
 
     # Function to add a violation for a process
     add_violation() {
-        local pid="$1"
-        local new_history=""
-        local found=0
+        pid="$1"
+        new_history=""
+        found=0
         
         # Update existing entry or add new one
         echo "$VIOLATION_HISTORY" | while IFS=':' read -r vpid vchecks; do
@@ -246,8 +246,8 @@ EOF
     
     # Function to count recent violations for a process
     count_violations() {
-        local pid="$1"
-        local count=0
+        pid="$1"
+        count=0
         
         if [ -z "$WINDOW_SIZE" ]; then
             # No time window - any violation counts
@@ -256,10 +256,10 @@ EOF
         fi
         
         # Count violations within window
-        local min_check=$((CHECK_COUNT - WINDOW_SIZE + 1))
+        min_check=$((CHECK_COUNT - WINDOW_SIZE + 1))
         [ "$min_check" -lt 1 ] && min_check=1
         
-        local vchecks=$(echo "$VIOLATION_HISTORY" | grep "^${pid}:" | cut -d':' -f2)
+        vchecks=$(echo "$VIOLATION_HISTORY" | grep "^${pid}:" | cut -d':' -f2)
         if [ -n "$vchecks" ]; then
             echo "$vchecks" | tr ',' '\n' | while read -r check; do
                 if [ -n "$check" ] && [ "$check" -ge "$min_check" ]; then
@@ -277,13 +277,13 @@ EOF
             return
         fi
         
-        local min_check=$((CHECK_COUNT - WINDOW_SIZE + 1))
+        min_check=$((CHECK_COUNT - WINDOW_SIZE + 1))
         [ "$min_check" -lt 1 ] && min_check=1
         
-        local new_history=""
+        new_history=""
         echo "$VIOLATION_HISTORY" | while IFS=':' read -r vpid vchecks; do
             if [ -n "$vpid" ]; then
-                local new_checks=""
+                new_checks=""
                 echo "$vchecks" | tr ',' '\n' | while read -r check; do
                     if [ -n "$check" ] && [ "$check" -ge "$min_check" ]; then
                         [ -n "$new_checks" ] && new_checks="${new_checks},"
@@ -579,6 +579,3 @@ EOF
         sleep "$SLEEP_TIME"
     done
 }
-
-# Call the function with all arguments
-sb_mksep "$@"
