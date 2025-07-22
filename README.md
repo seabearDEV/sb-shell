@@ -21,9 +21,9 @@ gc "Fix typo in documentation"
 ```
 
 ### sb-mksep - Monitor and Kill System Exhausting Processes
-A process monitoring tool that can automatically kill processes exceeding CPU or memory thresholds.
+A process monitoring tool that can automatically kill processes exceeding CPU or memory thresholds. Supports both individual process monitoring and aggregate threshold monitoring for multi-process applications.
 
-**Usage:** `sb-mksep [-n PROCESS_NAME] [-c CPU_THRESHOLD] [-m MEMORY_THRESHOLD] [-s SLEEP_TIME] [-t] [-o] [-a]`
+**Usage:** `sb-mksep [-n PROCESS_NAME] [-c CPU_THRESHOLD] [-m MEMORY_THRESHOLD] [-s SLEEP_TIME] [-t] [-o] [-a] [-k KILL_COUNT]`
 
 **Options:**
 - `-n PROCESS_NAME` - Process name to monitor (default: all processes)
@@ -32,18 +32,29 @@ A process monitoring tool that can automatically kill processes exceeding CPU or
 - `-s SLEEP_TIME` - Sleep time between checks in seconds (default: 30)
 - `-t` - Test mode (shows what would be killed without actually killing)
 - `-o` - Compact mode (only show processes with CPU/Memory >= 1%)
-- `-a` - Aggregate mode (group similar processes together)
+- `-a` - Aggregate mode (apply thresholds to combined usage of matching processes)
+- `-k KILL_COUNT` - Number of processes to kill when aggregate threshold exceeded (requires `-a`)
+
+**Modes:**
+- **Individual mode (default):** Each process is checked separately against thresholds
+- **Aggregate mode (-a):** Combined usage of matching processes is checked against thresholds
 
 **Examples:**
 ```sh
-# Monitor Firefox, kill if CPU > 90% or Memory > 85%
+# Individual mode: Kill any Firefox process exceeding 90% CPU or 85% Memory
 sb-mksep -n firefox -c 90 -m 85
+
+# Aggregate mode: Kill Chrome processes when their combined CPU exceeds 80%
+sb-mksep -n chrome -a -c 80
+
+# Kill 2 highest memory processes when total system memory exceeds 90%
+sb-mksep -a -m 90 -k 2
 
 # Test mode: show all processes exceeding 95% CPU
 sb-mksep -c 95 -t
 
-# Monitor Chrome every 10 seconds
-sb-mksep -n "chrome" -s 10
+# Monitor Chrome every 10 seconds with aggregate CPU threshold of 70%
+sb-mksep -n chrome -a -c 70 -s 10
 ```
 
 **Aliases:**
