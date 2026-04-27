@@ -219,12 +219,12 @@ EOF
         pid="$1"
         new_history=""
         found=0
-        
-        # Update existing entry or add new one
-        echo "$VIOLATION_HISTORY" | while IFS=':' read -r vpid vchecks; do
+
+        # Heredoc, not pipe: keeps the loop in this shell so new_history/found
+        # persist (POSIX sh and bash run pipe-RHS in a subshell).
+        while IFS=':' read -r vpid vchecks; do
             if [ -n "$vpid" ]; then
                 if [ "$vpid" = "$pid" ]; then
-                    # Add current check to this PID's history
                     new_history="${new_history}${pid}:${vchecks},${CHECK_COUNT}
 "
                     found=1
@@ -233,71 +233,83 @@ EOF
 "
                 fi
             fi
-        done
-        
-        # If PID not found, add it
+        done <<EOF
+$VIOLATION_HISTORY
+EOF
+
         if [ "$found" -eq 0 ]; then
             new_history="${new_history}${pid}:${CHECK_COUNT}
 "
         fi
-        
+
         VIOLATION_HISTORY="$new_history"
     }
-    
+
     # Function to count recent violations for a process
     count_violations() {
         pid="$1"
         count=0
-        
+
         if [ -z "$WINDOW_SIZE" ]; then
             # No time window - any violation counts
             echo "$VIOLATION_HISTORY" | grep "^${pid}:" >/dev/null && echo "1" || echo "0"
             return
         fi
-        
+
         # Count violations within window
         min_check=$((CHECK_COUNT - WINDOW_SIZE + 1))
         [ "$min_check" -lt 1 ] && min_check=1
-        
+
         vchecks=$(echo "$VIOLATION_HISTORY" | grep "^${pid}:" | cut -d':' -f2)
-        if [ -n "$vchecks" ]; then
-            echo "$vchecks" | tr ',' '\n' | while read -r check; do
-                if [ -n "$check" ] && [ "$check" -ge "$min_check" ]; then
-                    count=$((count + 1))
-                fi
-            done | tail -1
-        else
-            echo "0"
-        fi
+        # Walk comma-list via parameter expansion: portable across sh/bash/zsh
+        # (zsh does not field-split $var by default).
+        remaining="$vchecks"
+        while [ -n "$remaining" ]; do
+            case "$remaining" in
+                *,*) check="${remaining%%,*}"; remaining="${remaining#*,}" ;;
+                *)   check="$remaining"; remaining="" ;;
+            esac
+            if [ -n "$check" ] && [ "$check" -ge "$min_check" ]; then
+                count=$((count + 1))
+            fi
+        done
+        echo "$count"
     }
-    
+
     # Function to clean old violations outside window
     clean_old_violations() {
         if [ -z "$WINDOW_SIZE" ]; then
             return
         fi
-        
+
         min_check=$((CHECK_COUNT - WINDOW_SIZE + 1))
         [ "$min_check" -lt 1 ] && min_check=1
-        
+
         new_history=""
-        echo "$VIOLATION_HISTORY" | while IFS=':' read -r vpid vchecks; do
+        while IFS=':' read -r vpid vchecks; do
             if [ -n "$vpid" ]; then
                 new_checks=""
-                echo "$vchecks" | tr ',' '\n' | while read -r check; do
+                remaining="$vchecks"
+                while [ -n "$remaining" ]; do
+                    case "$remaining" in
+                        *,*) check="${remaining%%,*}"; remaining="${remaining#*,}" ;;
+                        *)   check="$remaining"; remaining="" ;;
+                    esac
                     if [ -n "$check" ] && [ "$check" -ge "$min_check" ]; then
                         [ -n "$new_checks" ] && new_checks="${new_checks},"
                         new_checks="${new_checks}${check}"
                     fi
                 done
-                
+
                 if [ -n "$new_checks" ]; then
                     new_history="${new_history}${vpid}:${new_checks}
 "
                 fi
             fi
-        done
-        
+        done <<EOF
+$VIOLATION_HISTORY
+EOF
+
         VIOLATION_HISTORY="$new_history"
     }
 

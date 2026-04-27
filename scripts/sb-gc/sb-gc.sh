@@ -35,19 +35,22 @@ sb_gc() {
             echo "Error: Failed to create temporary file." >&2
             return 1
         }
-        
-        # Ensure temp file is cleaned up on exit
-        trap 'rm -f "$TEMP_FILE"' EXIT INT TERM
 
-        # Write the commit message to the temporary file
+        # Scope the cleanup trap to the aspell window only. EXIT is omitted
+        # deliberately: this script is sourced, so an EXIT trap would persist
+        # in the user's shell after the function returns.
+        trap 'rm -f "$TEMP_FILE"' INT TERM
+
         echo "$MESSAGE" > "$TEMP_FILE"
 
-        # Use aspell to check and correct the spelling in the temporary file
         echo "Running spell check..."
         aspell -c "$TEMP_FILE" --dont-backup
 
-        # Read the corrected commit message from the temporary file
         MESSAGE=$(cat "$TEMP_FILE")
+
+        rm -f "$TEMP_FILE"
+        trap - INT TERM
+        unset TEMP_FILE
     else
         echo "Note: aspell not found, skipping spell check."
         echo "Install aspell for spell-checking functionality."
