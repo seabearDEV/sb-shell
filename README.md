@@ -76,6 +76,59 @@ sb-mksep -n chrome -a -c 70 -s 10
 
 - `mksep` - Alias for `sb-mksep`
 
+### sb-port - Show what's listening on a port
+
+A friendly wrapper around `lsof` for "what's on port N" queries. Defaults to TCP listening sockets and accepts single ports, multiple ports, and ranges.
+
+**Usage:** `sb-port [-U] PORT [PORT...]`
+
+**Options:**
+
+- `-U` - Use UDP instead of TCP
+- `-h` - Show help
+
+**Arguments:**
+
+- `PORT` - A port number (1-65535)
+- `PORT-PORT` - An inclusive range, e.g. `8000-8010` (max 1000 ports per range)
+
+**Examples:**
+
+```sh
+sb-port 8080                # what's on TCP 8080
+sb-port 80 443 8080         # multiple ports
+sb-port 8000-8010           # a small range
+sb-port -U 53               # UDP listener on 53
+```
+
+> `lsof` only sees processes owned by the current user; use `sudo` to see others.
+
+### sb-extract - Universal archive extractor
+
+Extracts archives based on file extension, dispatching to `tar`, `unzip`, `7z`, `unrar`, etc. so you don't have to remember tool-specific flags.
+
+**Usage:** `sb-extract [-d DIR] [-t] FILE [FILE...]`
+
+**Options:**
+
+- `-d DIR` - Extract to `DIR` (default: current directory)
+- `-t` - List archive contents instead of extracting
+- `-h` - Show help
+
+**Supported formats:**
+
+- Archives: `.tar`, `.tar.gz`/`.tgz`, `.tar.bz2`/`.tbz`/`.tbz2`, `.tar.xz`/`.txz`, `.zip`, `.7z`, `.rar`
+- Single-file: `.gz`, `.bz2`, `.xz` (extract only, `-t` not supported)
+
+**Examples:**
+
+```sh
+sb-extract archive.tar.gz
+sb-extract -d /tmp/x archive.zip
+sb-extract -t archive.7z
+sb-extract a.tar.gz b.zip c.7z   # batch extract
+```
+
 ## Prerequisites
 
 - Ensure that you have a POSIX-compatible shell installed on your system.
