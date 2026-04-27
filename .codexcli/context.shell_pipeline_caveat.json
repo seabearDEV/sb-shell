@@ -1,0 +1,7 @@
+{
+  "value": "Sourced scripts run inside the user's interactive shell, so pipeline subshell semantics differ across shells: zsh runs the rightmost stage in the parent shell; POSIX sh and bash (without `shopt -s lastpipe`) run it in a subshell, dropping any variable mutations. Convention used in this repo to stay portable across all three: (1) for state-mutating loops over multi-line strings, feed the input via a here-document (`while read; do ...; done <<EOF\\n$VAR\\nEOF`) instead of `echo \"$VAR\" | while`. (2) For walking a comma-separated list, use `case`-based parameter expansion (`${remaining%%,*}` / `${remaining#*,}`) inside a `while [ -n \"$remaining\" ]` loop -- NOT `IFS=,; for x in $var`, because zsh does not field-split bare `$var` by default. The pipe-while pattern in sb_mksep's add_violation/count_violations/clean_old_violations was rewritten to these idioms on 2026-04-27 (the original time-window feature shipped broken: count_violations returned an empty string in window mode, so `-w` never actually triggered kills under any shell).",
+  "meta": {
+    "created": 1777304155212,
+    "updated": 1777307237898
+  }
+}

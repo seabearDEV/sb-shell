@@ -1,0 +1,7 @@
+{
+  "value": "install.sh — interactive installer. Wipes and recreates ~/.sb-shell/, copies sb-shell.sh + scripts/ tree, prompts before overwriting an existing install. Prints rc-file source hint at the end. Does NOT modify the user's rc file itself.",
+  "meta": {
+    "created": 1777304150948,
+    "updated": 1777304150948
+  }
+}

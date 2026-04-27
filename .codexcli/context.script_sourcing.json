@@ -1,0 +1,7 @@
+{
+  "value": "Every script carries `#!/bin/sh`, but the shebang is effectively decorative — scripts are *sourced* by sb-shell.sh into the user's interactive shell (bash/zsh on macOS), they are never executed. That means: (1) the user's shell pipeline/expansion semantics apply, not POSIX sh's; (2) `return` works (it's inside a function); (3) `trap` calls modify the user's shell global trap table (see context.gc_trap_persistence). Treat `#!/bin/sh` as an aspirational \"stay portable\" marker, not a runtime guarantee.",
+  "meta": {
+    "created": 1777304150978,
+    "updated": 1777304150978
+  }
+}

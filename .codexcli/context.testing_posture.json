@@ -1,0 +1,7 @@
+{
+  "value": "This repo intentionally ships no test suite. When verifying changes (especially to sb_mksep's violation tracking), run a one-off harness under all three shells (`/bin/sh`, `/bin/bash`, `/bin/zsh`) and discard it -- do NOT commit it. Rationale (decided 2026-04-27): the violation helpers are nested inside `sb_mksep()`, so any test would need to copy the function bodies to top level, which silently drifts from the real implementation and is worse than no test. If durable testing becomes desirable, the prerequisite is a refactor that extracts the helpers into a sourceable file (e.g. `scripts/sb-mksep/_violations.sh`) so the test exercises the actual code -- raise that as a separate piece of work.",
+  "meta": {
+    "created": 1777307241478,
+    "updated": 1777307241478
+  }
+}

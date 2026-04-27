@@ -1,0 +1,7 @@
+{
+  "value": "sb-shell.sh discovers every *.sh under $HOME/.sb-shell/scripts (find-based, glob fallback) and sources them into the user's interactive shell. Scripts are expected to define functions, not run side effects on source. Opt-in side effects via a magic comment: a script tagged `# sb-shell: auto-run` is announced (\"Auto-running: …\") AND sourced like any other; without the tag, it's silently sourced. SB_SHELL_LOADING=1 is exported during the load and unset at the end — scripts can branch on it if they need to detect \"loading\" vs. interactive call.",
+  "meta": {
+    "created": 1777304150925,
+    "updated": 1777304150925
+  }
+}

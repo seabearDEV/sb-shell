@@ -1,0 +1,7 @@
+{
+  "value": "New script layout: `scripts/sb-<name>/sb-<name>.sh`, `#!/bin/sh`, defines a single function `sb_<name>()` (underscore in function, hyphen in path). Errors go to stderr (`>&2`); user-facing info to stdout. Validate inputs with `grep -Eq` regex (POSIX-safe) instead of `[[ =~ ]]`. If the script needs to *run* something on source (not just define a function), tag it with `# sb-shell: auto-run`. Document any expected user alias in the README rather than baking it in.",
+  "meta": {
+    "created": 1777304165776,
+    "updated": 1777304165776
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "value": "scripts/sb-mksep/sb-mksep.sh — defines `sb_mksep()`. Monitor-and-kill loop driven by `ps aux | awk` against CPU/memory thresholds. Modes: individual (default), aggregate (-a, sums matching procs), test (-t, dry-run), compact (-o), time-window (-w X/Y, requires X violations within Y checks before killing). Requires ps, awk, kill, bc.",
+  "meta": {
+    "created": 1777304150960,
+    "updated": 1777304150960
+  }
+}

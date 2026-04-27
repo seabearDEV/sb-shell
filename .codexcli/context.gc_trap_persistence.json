@@ -1,0 +1,7 @@
+{
+  "value": "Convention for traps in sourced scripts in this repo: never install an `EXIT` trap, because EXIT in a sourced function fires when the *user's shell* exits, not on function return -- it persists indefinitely. Use only `INT TERM` (the signals that can interrupt a running command), and explicitly clear them with `trap - INT TERM` plus an explicit `rm`/`unset` on the success path before returning. sb_gc was originally `trap '...' EXIT INT TERM` with no clear; rewritten 2026-04-27 to drop EXIT and clear traps before return. If you need a temporary cleanup hook that survives exceptional control flow, prefer a subshell scope (`( trap ...; do work )`) over installing on the parent shell.",
+  "meta": {
+    "created": 1777304158596,
+    "updated": 1777307112226
+  }
+}

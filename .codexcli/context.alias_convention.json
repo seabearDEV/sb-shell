@@ -1,0 +1,7 @@
+{
+  "value": "Scripts define functions named with underscores (`sb_mksep`, `sb_gc`) but the README documents calling them with hyphens (`sb-mksep`, `gc`, `mksep`). The repo intentionally ships no aliases — commit 845b82b (\"Removes inline aliases in favor of user defined aliases in configuration files\") moved that responsibility to the user's rc file. When adding a new script, do not put `alias X=Y` lines inside it; just define the function and document the expected alias in README.",
+  "meta": {
+    "created": 1777304150975,
+    "updated": 1777304150975
+  }
+}

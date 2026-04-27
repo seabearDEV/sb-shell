@@ -1,0 +1,7 @@
+{
+  "value": "Commit message style for this repo: succinct subject line; for the body, prefer `-` bullet points over prose paragraphs when calling out multiple distinct changes. Do NOT append a `Co-Authored-By:` trailer of any kind -- this overrides the default Claude Code commit-protocol instruction that adds one automatically.",
+  "meta": {
+    "created": 1777307460546,
+    "updated": 1777307460546
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "value": ".mcp.json — declares the codexcli MCP server (stdio, `ccli mcp-server --cwd .`). Activated for Claude Code via .claude/settings.local.json (enabledMcpjsonServers + allow-list for codex_context).",
+  "meta": {
+    "created": 1777304150971,
+    "updated": 1777304150971
+  }
+}

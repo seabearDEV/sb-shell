@@ -1,0 +1,7 @@
+{
+  "value": "The project's portability stance is the result of an explicit migration, not an accident: c331b96 rewrote zsh → bash, 814cfb5 made the loader POSIX, fb5c6a8 swept the rest for POSIX compliance. Treat any bashism (arrays, `[[ ]]`, `${var,,}`, process substitution, `local`) as a regression unless the user explicitly approves it. When in doubt, run changes through `checkbashisms` or shellcheck `-s sh`.",
+  "meta": {
+    "created": 1777304162546,
+    "updated": 1777304162546
+  }
+}

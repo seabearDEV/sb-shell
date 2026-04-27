@@ -1,0 +1,7 @@
+{
+  "value": "sb-shell.sh — the loader installed to ~/.sb-shell/sb-shell.sh and sourced from the user's rc file. POSIX, find-based discovery with a glob fallback, recurses one level into scripts/*/.",
+  "meta": {
+    "created": 1777304150943,
+    "updated": 1777304150943
+  }
+}

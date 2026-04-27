@@ -1,0 +1,7 @@
+{
+  "value": "Portable idioms used across sb-shell scripts (sourced into bash/zsh, must not break under POSIX sh either): (1) heredoc-fed `while read` instead of `echo $var | while read` for state-mutating loops; (2) `case \"$x\" in *,*) head=\"${x%%,*}\"; x=\"${x#*,}\" ;; *) head=\"$x\"; x=\"\" ;; esac` for splitting comma-separated strings (works under zsh's no-implicit-word-split default); (3) `trap '...' INT TERM` only (never EXIT) plus explicit cleanup on return; (4) integer comparisons via `[ \"$a\" -ge \"$b\" ]` only after `grep -Eq '^[0-9]+$'` validation; (5) numeric float compare via `bc` (`[ \"$(echo \"$x > $y\" | bc)\" = \"1\" ]`).",
+  "meta": {
+    "created": 1777307117500,
+    "updated": 1777307117500
+  }
+}

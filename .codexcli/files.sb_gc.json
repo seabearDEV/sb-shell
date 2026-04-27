@@ -1,0 +1,7 @@
+{
+  "value": "scripts/sb-gc/sb-gc.sh — defines `sb_gc()`. `git commit -m \"$*\"` wrapper; if aspell is on PATH, opens the message in `aspell -c` via mktemp scratch file before prompting y/n to commit. Skips spell-check (warns, continues) when aspell missing.",
+  "meta": {
+    "created": 1777304150967,
+    "updated": 1777304150967
+  }
+}
